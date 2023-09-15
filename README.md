@@ -6,8 +6,11 @@ This is a bench for learning about prompt engineering when using text-to-image a
 
 ## Installation
 
+If you don't have [asdf](https://github.com/asdf-vm/asdf#asdf--) (language version manager) and [direnv]() installed, start with that:
+
 ```shell
-mkdir images
+# Install python using asdf or your
+# chosen version manager
 brew install asdf direnv
 asdf plugin add python https://github.com/danhper/asdf-python.git
 asdf install python 3.10.13
@@ -15,43 +18,46 @@ asdf install python 3.10.13
 # configure the version of python to use
 asdf local python 3.10.13
 # or asdf global python 3.10.13
+# Note: when using local a ".tool-versions" file is created
+```
 
-# create and activate a virtual environment
-python3 -m venv .venv
+Then you can create an install the virtual environment with direnv:
+
+```shell
+# configure your ENVVARS
+# (open the .envrc file and make necessary changes)
+cp .envrc-example .envrc
 
 # enable ENVVARS and source the venv
 direnv allow .
-
 # If you don't want to use direnv, do the following:
 # export PYTHONPATH="${PYTHONPATH}:/Users/[name]/.../diffusion-bench/src"
 # source .venv/bin/activate
-
-# verify that you're using the venv
-python3 -m pip -V
-
-# install the dependencies
-python3 -m pip install -r requirements.txt
 ```
 
+#### Installation Notes
+
+Make sure to keep the requirements.txt up to date when adding dependencies:
+
 ```shell
-# make sure to keep the requirements.txt up to date
-# when you add a dependency
 python3 -m pip install scipy
 python3 -m pip freeze > requirements.txt
 ```
 
+The original install to produce that requirements.txt was:
+
 ```shell
-# NOTE: the original install to produce that requirements.txt was:
 python3 -m pip install transformers sentencepiece diffusers \
                        ipykernel invisible_watermark accelerate \
                        safetensors torch ipyplot scipy
 
-# NOTE that for TencentARC/t2i-adapter-lineart-sdxl-1.0,
+# For TencentARC/t2i-adapter-lineart-sdxl-1.0,
 # the version of diffusers that needs to be installed is
 # different than what's listed above. For that we need:
 
 python3 -m pip install -U git+https://github.com/huggingface/diffusers.git
-python3 -m pip install -U controlnet_aux==0.0.7 # for conditioning models and detectors
+# and controlnet_aux for conditioning models and detectors
+python3 -m pip install -U controlnet_aux==0.0.7
 ```
 
 ## Usage
