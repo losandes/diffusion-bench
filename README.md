@@ -11,10 +11,10 @@ mkdir images
 brew install asdf direnv
 asdf plugin add python https://github.com/danhper/asdf-python.git
 asdf install python 3.10.13
-asdf global python 3.10.13
 
 # configure the version of python to use
 asdf local python 3.10.13
+# or asdf global python 3.10.13
 
 # enable ENVVARS
 # If you don't want to use direnv, you can update
@@ -168,7 +168,7 @@ python3 -m src --prompt "a cute, tabby cat" \
 Given a base image with a blurry mangled face:
 
 ```shell
-python3 src --prompt "a cute, tabby cat" \
+python3 -m src --prompt "a cute, tabby cat" \
   --models "dreamlike-art/dreamlike-photoreal-2.0" \
   --seeds "12621049111909025765" \
   --steps "10"
@@ -179,7 +179,7 @@ python3 src --prompt "a cute, tabby cat" \
 Generate 4 images using a different negative prompt for each image ("blurry", "mangled face", "deformed face", "blurry, mangled face, deformed face"):
 
 ```shell
-python3 src --prompt "a cute, tabby cat" \
+python3 -m src --prompt "a cute, tabby cat" \
   --negative_prompt "blurry | mangled face | deformed face | blurry, mangled face, deformed face" \
   --models "dreamlike-art/dreamlike-photoreal-2.0, dreamlike-art/dreamlike-photoreal-2.0, dreamlike-art/dreamlike-photoreal-2.0, dreamlike-art/dreamlike-photoreal-2.0" \
   --seeds "12621049111909025765, 12621049111909025765, 12621049111909025765, 12621049111909025765" \
