@@ -16,15 +16,15 @@ asdf install python 3.10.13
 asdf local python 3.10.13
 # or asdf global python 3.10.13
 
-# enable ENVVARS
-# If you don't want to use direnv, you can update
-# the python path manually:
-# export PYTHONPATH="${PYTHONPATH}:/Users/[name]/.../diffusion-bench/src"
-direnv allow .
-
 # create and activate a virtual environment
 python3 -m venv .venv
-source .venv/bin/activate
+
+# enable ENVVARS and source the venv
+direnv allow .
+
+# If you don't want to use direnv, do the following:
+# export PYTHONPATH="${PYTHONPATH}:/Users/[name]/.../diffusion-bench/src"
+# source .venv/bin/activate
 
 # verify that you're using the venv
 python3 -m pip -V
