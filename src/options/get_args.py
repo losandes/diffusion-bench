@@ -6,12 +6,10 @@ from options.make_paths import make_paths
 from options.split_to_list import split_to_list
 from pipelines.make_pipelines import make_pipelines
 
-def get_args ():
+def _parse_args ():
   """
-  Gets the args that were passed with the terminal command and
-  returns them in a dict with defaults for missing args
+  Parses the args passed in the terminal command
   """
-
   # Initialize parser
   parser = argparse.ArgumentParser()
 
@@ -38,7 +36,14 @@ def get_args ():
   # TODO: Add option to turn off custom latents
 
   # Read arguments from command line
-  args = parser.parse_args()
+  return parser.parse_args()
+
+def get_args ():
+  """
+  Gets the args that were passed with the terminal command and
+  returns them in a dict with defaults for missing args
+  """
+  args = _parse_args()
 
   DEVICE = args.device_type if args.device_type is not None else get_device_type()
   PROMPT = split_to_list("|")(args.prompt)
