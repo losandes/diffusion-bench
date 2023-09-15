@@ -1,6 +1,6 @@
 # Diffusion Bench
 
-This is a bench for learning about prompt engineering when using text-to-image and image-to-image diffusing models. It is currently in DRAFT form... I'm not tracking breaking changes.
+This is a bench for learning about prompt engineering when using text-to-image and image-to-image diffusion models. It is currently in DRAFT form... I'm not tracking breaking changes.
 
 ![example step analysis output 01](examples/step-analysis-01.png)
 
@@ -171,7 +171,7 @@ python3 -m src --prompt "a cute, tabby cat" \
 
 ### Evaluate negative prompts (text-to-image)
 
-Given a base image with a blurry mangled face:
+Given a base image with a blurry, mangled face:
 
 ```shell
 python3 -m src --prompt "a cute, tabby cat" \
