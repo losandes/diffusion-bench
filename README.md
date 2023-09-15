@@ -28,11 +28,11 @@ Then you can create an install the virtual environment with direnv:
 # (open the .envrc file and make necessary changes)
 cp .envrc-example .envrc
 
-# enable ENVVARS and source the venv
+# create the venv, install packages, and enable ENVVARS
 direnv allow .
-# If you don't want to use direnv, do the following:
-# export PYTHONPATH="${PYTHONPATH}:/Users/[name]/.../diffusion-bench/src"
-# source .venv/bin/activate
+# If you don't want to use direnv, read the .envrc-example
+# file and execute most of those commands using your
+# preferred method
 ```
 
 #### Installation Notes
