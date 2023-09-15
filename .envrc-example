@@ -1,0 +1,1 @@
+export PYTHONPATH="${PYTHONPATH}:/Users/[name]/.../diffusion-bench/src"

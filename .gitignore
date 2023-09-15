@@ -1,3 +1,8 @@
+# Working Directories
+images
+PROMPTS.md
+src/sandbox.ipynb
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -120,6 +125,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
+.envrc
 .env
 .venv
 env/
