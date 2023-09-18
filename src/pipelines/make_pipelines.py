@@ -10,16 +10,56 @@ import pipelines.pix2pix as p2p
 from constants import GENERATOR, REFINER, UPSCALER
 
 PIPELINES = {
-  "dreamlike-art/dreamlike-photoreal-2.0": [GENERATOR, dp.makePipelines],
-  "stabilityai/stable-diffusion-xl-base-1.0": [GENERATOR, sdxl_base.makePipelines],
-  "stabilityai/stable-diffusion-2-1": [GENERATOR, sdxl_2_1.makePipelines],
-  "prompthero/openjourney": [GENERATOR, oj.makePipelines],
+  "dreamlike-art/dreamlike-photoreal-2.0": {
+    "short_name": "dp2",
+    "type": GENERATOR,
+    "factory": dp.makePipelines,
+    "in_channels": None,
+  },
+  "stabilityai/stable-diffusion-xl-base-1.0": {
+    "short_name": "sdxl_base1",
+    "type": GENERATOR,
+    "factory": sdxl_base.makePipelines,
+    "in_channels": None,
+  },
+  "stabilityai/stable-diffusion-2-1": {
+    "short_name": "sdxl_2_1",
+    "type": GENERATOR,
+    "factory": sdxl_2_1.makePipelines,
+    "in_channels": None,
+  },
+  "prompthero/openjourney": {
+    "short_name": "oj",
+    "type": GENERATOR,
+    "factory": oj.makePipelines,
+    "in_channels": None,
+  },
 
-  "stabilityai/stable-diffusion-xl-refiner-1.0": [REFINER, sdxl_refiner.makePipelines],
-  "TencentARC/t2i-adapter-lineart-sdxl-1.0": [REFINER, sdxl_lineart.makePipelines],
-  "timbrooks/instruct-pix2pix": [REFINER, p2p.makePipelines],
+  "stabilityai/stable-diffusion-xl-refiner-1.0": {
+    "short_name": "sdxl_refiner1",
+    "type": REFINER,
+    "factory": sdxl_refiner.makePipelines,
+    "in_channels": None,
+  },
+  "TencentARC/t2i-adapter-lineart-sdxl-1.0": {
+    "short_name": "sdxl_lineart1",
+    "type": REFINER,
+    "factory": sdxl_lineart.makePipelines,
+    "in_channels": None,
+  },
+  "timbrooks/instruct-pix2pix": {
+    "short_name": "p2p",
+    "type": REFINER,
+    "factory": p2p.makePipelines,
+    "in_channels": 4, # override the in_channels
+  },
 
-  "stabilityai/stable-diffusion-x4-upscaler": [UPSCALER, sdx4_upscaler.makePipelines],
+  "stabilityai/stable-diffusion-x4-upscaler": {
+    "short_name": "sdx4-up",
+    "type": UPSCALER,
+    "factory": sdx4_upscaler.makePipelines,
+    "in_channels": None,
+  },
 }
 singletons = {}
 
@@ -37,7 +77,23 @@ def make_one_pipeline (name, device):
     return singletons[name]
   elif name in PIPELINES:
     print(f"loading pipeline: {name}")
-    singletons[name] = [PIPELINES[name][0], PIPELINES[name][1](device)]
+    pipe = PIPELINES[name]['factory'](device)[1]
+    in_channels = None
+
+    if PIPELINES[name]['in_channels'] is not None:
+      in_channels = PIPELINES[name]['in_channels']
+    else:
+      in_channels = pipe.unet.config.in_channels
+
+    singletons[name] = {
+      "name": name,
+      "short_name": PIPELINES[name]['short_name'],
+      "type": PIPELINES[name]['type'],
+      "factory": PIPELINES[name]['factory'],
+      "pipe": pipe,
+      "in_channels": in_channels,
+    }
+
     return singletons[name]
   else:
     raise Exception(f"A pipeline with name, {name}, is not registered")
