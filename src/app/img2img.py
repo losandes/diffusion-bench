@@ -1,12 +1,16 @@
-from files.load import load_image
+from ..files.load import load_image
+from ..files.save import save_image
 
 def _refine (
   options,
+  ensembleIdx,
   **kwargs,
 ):
   """
   Refines, upscales, or otherwise transforms an image
   """
+  copyright = options['copyright']
+  models = options['models']
   model = options['model']
   prompt = options['prompt']
   in_paths = options['input_paths']
@@ -32,21 +36,25 @@ def _refine (
       **kwargs,
     ).images[0]
     images.append([out_paths[i], refined])
-    refined.save(out_paths[i])
+
+    if out_paths[i] is not None:
+      save_image(image, out_paths[i], prompt, seeds[i], copyright, models, ensembleIdx)
 
   return images
 
-def img2img (options):
+def img2img (options, ensembleIdx=0):
   """
   Refines, upscales, or otherwise transforms an image
 
   Parameters:
     options (dict): the arguments passed to main, with defaults added
+    ensembleIdx (int): the index of the step, when this is one step in an ensemble
 
   Returns: [Image]
   """
   return _refine(
     options,
+    ensembleIdx,
     negative_prompt=options['negative_prompt'],
     num_inference_steps=options['steps'],
   )

@@ -1,11 +1,11 @@
-import pipelines.openjourney as oj
-import pipelines.dreamlike_photoreal as dp
-import pipelines.stable_diffusion_2_1 as sdxl_2_1
-import pipelines.stable_diffusion_xl_base as sdxl_base
-import pipelines.stable_diffusion_xl_refiner as sdxl_refiner
-import pipelines.stable_diffusion_xl_lineart as sdxl_lineart
-import pipelines.stable_diffusion_x4_upscaler as sdx4_upscaler
-import pipelines.pix2pix as p2p
+from . import openjourney as oj
+from . import dreamlike_photoreal as dp
+from . import stable_diffusion_2_1 as sdxl_2_1
+from . import stable_diffusion_xl_base as sdxl_base
+from . import stable_diffusion_xl_refiner as sdxl_refiner
+from . import stable_diffusion_xl_lineart as sdxl_lineart
+from . import stable_diffusion_x4_upscaler as sdx4_upscaler
+from . import pix2pix as p2p
 
 from constants import GENERATOR, REFINER, UPSCALER
 
