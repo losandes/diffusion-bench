@@ -47,17 +47,18 @@ python3 -m pip freeze > requirements.txt
 The original install to produce that requirements.txt was:
 
 ```shell
-python3 -m pip install transformers sentencepiece diffusers \
-                       ipykernel invisible_watermark accelerate \
-                       safetensors torch ipyplot scipy
+python3 -m pip install --upgrade transformers sentencepiece \
+               diffusers ipykernel invisible_watermark \
+               accelerate safetensors torch ipyplot scipy
+```
 
-# For TencentARC/t2i-adapter-lineart-sdxl-1.0,
-# the version of diffusers that needs to be installed is
-# different than what's listed above. For that we need:
+If you want to use TencentARC/t2i-adapter-lineart-sdxl-1.0, it needs a different version of diffusers and controlnet_aux for conditioning models and detectors:
 
-python3 -m pip install -U git+https://github.com/huggingface/diffusers.git
-# and controlnet_aux for conditioning models and detectors
-python3 -m pip install -U controlnet_aux==0.0.7
+```shell
+python3 -m pip uninstall diffusers
+python3 -m pip install --upgrade \
+  git+https://github.com/huggingface/diffusers.git
+python3 -m pip install --upgrade controlnet_aux==0.0.7
 ```
 
 ## Usage
@@ -83,21 +84,28 @@ options:
 - `-o`, `--output_path`: A path to a folder where images will be saved (can be relative)
 - `-t`, `--output_path_template`: A template for naming the files (default=":path/:count_idx-:type-:model_idx.png")
 - `-i`, `--input_paths`: A comma-separated list of paths to images that will be refined or upscaled by the given models
-- `-a`, `--refinement_mode`: one of:
+- `-d`, `--device_type` The type of device the pipes will be fed to for processing (default="cuda" if cuda is supported, else "mps" if apple M1/M2, else "cpu")
+- `--refinement_mode`: one of:
   - "sequence" (each pass is fed into the next pass),
   - "first_to_many" (each pass is fed the first item generated),
   - "in_to_many" (each pass is fed the value of -i/--input_paths)
-- `-d`, `--device_type` The type of device the pipes will be fed to for processing (default="cuda" if cuda is supported, else "mps" if apple M1/M2, else "cpu")
+- `--copyright`: Who should be granted ownership of this image
 
 models:
 
+- [wavymulder/Analog-Diffusion](https://huggingface.co/wavymulder/Analog-Diffusion)
+    - NOTE: you have to use "analog style" in the prompt for this to take effect
+- [Deci/DeciDiffusion-v1-0](https://huggingface.co/Deci/DeciDiffusion-v1-0)
 - [dreamlike-art/dreamlike-photoreal-2.0](https://huggingface.co/dreamlike-art/dreamlike-photoreal-2.0)
 - [prompthero/openjourney](https://huggingface.co/prompthero/openjourney)
 - [stabilityai/stable-diffusion-2-1](https://huggingface.co/stabilityai/stable-diffusion-2-1)
 - [stabilityai/stable-diffusion-x4-upscaler](https://huggingface.co/stabilityai/stable-diffusion-x4-upscaler)
 - [stabilityai/stable-diffusion-xl-base-1.0](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0)
-- [TencentARC/t2i-adapter-lineart-sdxl-1.0](https://huggingface.co/TencentARC/t2i-adapter-lineart-sdxl-1.0)
 - [stabilityai/stable-diffusion-xl-refiner-1.0](https://huggingface.co/stabilityai/stable-diffusion-xl-refiner-1.0)
+- [TencentARC/t2i-adapter-lineart-sdxl-1.0](https://huggingface.co/TencentARC/t2i-adapter-lineart-sdxl-1.0)
+- [timbrooks/instruct-pix2pix](https://huggingface.co/timbrooks/instruct-pix2pix)
+- [minimaxir/sdxl-wrong-lora](https://huggingface.co/minimaxir/sdxl-wrong-lora)
+    - NOTE: you have to use "wrong" as a negative prompt for this to take effect
 
 ## Examples
 

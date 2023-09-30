@@ -13,7 +13,7 @@ if [ ! -d ".venv" ] ; then
   source $VIRTUAL_ENV/bin/activate
 
   echo "Installing packages"
-  python3 -m pip install -r requirements.txt
+  python3 -m pip install -r requirements.txt --use-pep517
 fi
 
 # create the output directory

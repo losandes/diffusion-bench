@@ -1,79 +1,58 @@
-from app.get_arr_value import get_value_or_none, get_value_or_first
-from files.load import load_image
-from pipelines.make_latents import make_latents
+from ..files.load import load_image
+from ..files.save import save_image
 
 def _refine (
   options,
-  step,
+  ensembleIdx,
   **kwargs,
 ):
   """
   Refines, upscales, or otherwise transforms an image
   """
-  pipeline = options['MODELS'][step][1]
-  prompt = get_value_or_first(options['PROMPT'], step)
-  in_paths = None
-  out_paths = options['PATHS'][step]
-  device = options['DEVICE']
-  seeds = seeds=options['SEEDS']
-  height = options['HEIGHT']
-  width = options['WIDTH']
-  use_custom_latents = options['CUSTOM_LATENTS']
-  [model_id, pipe] = pipeline
+  model = options['model']
+  prompt = options['prompt']
+  in_paths = options['input_paths']
+  out_paths = options['output_paths']
+  latents = options['latents']
+  seeds = options['seeds']
   images = []
 
-  if step == 0:
-    in_paths = options['INPUT_PATHS']
-  else:
-    in_paths = options['PATHS'][step - 1]
-
   for i in range(len(out_paths)):
-    latent_seed = None
-    latents = None
-
-    if use_custom_latents == True:
-      [latent_seed, latents] = make_latents(
-        device,
-        # TODO this is a temporary hack to get latents working with pix2pix
-        pipe.unet.config.in_channels if model_id != "timbrooks/instruct-pix2pix" else 4,
-        height=height,
-        width=width,
-        seed=get_value_or_none(seeds, i),
-      )
-
     print("")
-    print(f"model_id: {model_id}")
+    print(f"model_id: {model['name']}")
     print(f"prompt: {prompt}")
     print(f"kwargs: {kwargs}")
-    print(f"seed:   {latent_seed}")
+    print(f"seed:   {seeds[i]}")
+    print(f"image:  {out_paths[i]}")
     print("")
 
     image = load_image(in_paths[i])
-    refined = pipe(
+    refined = model['pipe'](
       prompt,
       image=image,
-      latents=latents,
+      latents=latents[i],
       **kwargs,
     ).images[0]
     images.append([out_paths[i], refined])
-    refined.save(out_paths[i])
+
+    if out_paths[i] is not None:
+      save_image(refined, out_paths[i], seeds[i], ensembleIdx, options)
 
   return images
 
-def img2img (options, step):
+def img2img (options, ensembleIdx=0):
   """
   Refines, upscales, or otherwise transforms an image
 
   Parameters:
     options (dict): the arguments passed to main, with defaults added
-    step (int): if this is one of many images being generated, the
-                zero-based index of this iteration
+    ensembleIdx (int): the index of the step, when this is one step in an ensemble
 
   Returns: [Image]
   """
   return _refine(
     options,
-    step,
-    negative_prompt=get_value_or_first(options['NEGATIVE_PROMPT'], step),
-    num_inference_steps=options['STEPS'][step],
+    ensembleIdx,
+    negative_prompt=options['negative_prompt'],
+    num_inference_steps=options['steps'],
   )
