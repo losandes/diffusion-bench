@@ -1,31 +1,35 @@
-from . import openjourney as oj
+from . import analog_diffusion as analog
+from . import deci_diffusion as dd
 from . import dreamlike_photoreal as dp
+from . import openjourney as oj
+from . import pix2pix as p2p
 from . import stable_diffusion_2_1 as sdxl_2_1
 from . import stable_diffusion_xl_base as sdxl_base
 from . import stable_diffusion_xl_refiner as sdxl_refiner
 from . import stable_diffusion_xl_lineart as sdxl_lineart
 from . import stable_diffusion_x4_upscaler as sdx4_upscaler
-from . import pix2pix as p2p
+from . import wrong_lora_refiner as wrong
+from . import wuerstchen
 
 from constants import GENERATOR, REFINER, UPSCALER
 
 PIPELINES = {
+  "wavymulder/Analog-Diffusion": {
+    "short_name": "analog",
+    "type": GENERATOR,
+    "factory": analog.makePipelines,
+    "in_channels": None,
+  },
+  "Deci/DeciDiffusion-v1-0": {
+    "short_name": "ddv1",
+    "type": GENERATOR,
+    "factory": dd.makePipelines,
+    "in_channels": None,
+  },
   "dreamlike-art/dreamlike-photoreal-2.0": {
     "short_name": "dp2",
     "type": GENERATOR,
     "factory": dp.makePipelines,
-    "in_channels": None,
-  },
-  "stabilityai/stable-diffusion-xl-base-1.0": {
-    "short_name": "sdxl_base1",
-    "type": GENERATOR,
-    "factory": sdxl_base.makePipelines,
-    "in_channels": None,
-  },
-  "stabilityai/stable-diffusion-2-1": {
-    "short_name": "sdxl_2_1",
-    "type": GENERATOR,
-    "factory": sdxl_2_1.makePipelines,
     "in_channels": None,
   },
   "prompthero/openjourney": {
@@ -34,7 +38,24 @@ PIPELINES = {
     "factory": oj.makePipelines,
     "in_channels": None,
   },
-
+  "stabilityai/stable-diffusion-2-1": {
+    "short_name": "sdxl_2_1",
+    "type": GENERATOR,
+    "factory": sdxl_2_1.makePipelines,
+    "in_channels": None,
+  },
+  "stabilityai/stable-diffusion-x4-upscaler": {
+    "short_name": "sdx4-up",
+    "type": UPSCALER,
+    "factory": sdx4_upscaler.makePipelines,
+    "in_channels": None,
+  },
+  "stabilityai/stable-diffusion-xl-base-1.0": {
+    "short_name": "sdxl_base1",
+    "type": GENERATOR,
+    "factory": sdxl_base.makePipelines,
+    "in_channels": None,
+  },
   "stabilityai/stable-diffusion-xl-refiner-1.0": {
     "short_name": "sdxl_refiner1",
     "type": REFINER,
@@ -53,11 +74,16 @@ PIPELINES = {
     "factory": p2p.makePipelines,
     "in_channels": 4, # override the in_channels
   },
-
-  "stabilityai/stable-diffusion-x4-upscaler": {
-    "short_name": "sdx4-up",
-    "type": UPSCALER,
-    "factory": sdx4_upscaler.makePipelines,
+  "minimaxir/sdxl-wrong-lora": {
+    "short_name": "wront-lora",
+    "type": GENERATOR,
+    "factory": wrong.makePipelines,
+    "in_channels": None,
+  },
+  "warp-diffusion/wuerstchen": {
+    "short_name": "wuerstchen",
+    "type": GENERATOR,
+    "factory": wuerstchen.makePipelines,
     "in_channels": None,
   },
 }

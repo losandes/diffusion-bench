@@ -93,13 +93,19 @@ options:
 
 models:
 
+- [wavymulder/Analog-Diffusion](https://huggingface.co/wavymulder/Analog-Diffusion)
+    - NOTE: you have to use "analog style" in the prompt for this to take effect
+- [Deci/DeciDiffusion-v1-0](https://huggingface.co/Deci/DeciDiffusion-v1-0)
 - [dreamlike-art/dreamlike-photoreal-2.0](https://huggingface.co/dreamlike-art/dreamlike-photoreal-2.0)
 - [prompthero/openjourney](https://huggingface.co/prompthero/openjourney)
 - [stabilityai/stable-diffusion-2-1](https://huggingface.co/stabilityai/stable-diffusion-2-1)
 - [stabilityai/stable-diffusion-x4-upscaler](https://huggingface.co/stabilityai/stable-diffusion-x4-upscaler)
 - [stabilityai/stable-diffusion-xl-base-1.0](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0)
-- [TencentARC/t2i-adapter-lineart-sdxl-1.0](https://huggingface.co/TencentARC/t2i-adapter-lineart-sdxl-1.0)
 - [stabilityai/stable-diffusion-xl-refiner-1.0](https://huggingface.co/stabilityai/stable-diffusion-xl-refiner-1.0)
+- [TencentARC/t2i-adapter-lineart-sdxl-1.0](https://huggingface.co/TencentARC/t2i-adapter-lineart-sdxl-1.0)
+- [timbrooks/instruct-pix2pix](https://huggingface.co/timbrooks/instruct-pix2pix)
+- [minimaxir/sdxl-wrong-lora](https://huggingface.co/minimaxir/sdxl-wrong-lora)
+    - NOTE: you have to use "wrong" as a negative prompt for this to take effect
 
 ## Examples
 

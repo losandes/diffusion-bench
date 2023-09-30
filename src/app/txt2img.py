@@ -5,8 +5,6 @@ def _generate (
   ensembleIdx,
   **kwargs,
 ):
-  copyright = options['copyright']
-  models = options['models']
   model = options['model']
   prompt = options['prompt']
   latents = options['latents']
@@ -31,7 +29,7 @@ def _generate (
     images.append([out_paths[i], image])
 
     if out_paths[i] is not None:
-      save_image(image, out_paths[i], prompt, seeds[i], copyright, models, ensembleIdx)
+      save_image(image, out_paths[i], seeds[i], ensembleIdx, options)
 
   return images
 
