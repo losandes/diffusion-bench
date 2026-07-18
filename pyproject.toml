@@ -12,11 +12,11 @@ dependencies = [
     "ipykernel>=6.29.5",
     "ipyplot>=1.1.2",
     "mediapipe>=0.10.21",
-    "pillow>=11.2.1",
-    "requests>=2.32.3",
+    "pillow>=12.2.0",       # security: OOB write / decompression-bomb / overflow fixes
+    "requests>=2.33.0",     # security: netrc credential leak / temp-file reuse fixes
     "safetensors>=0.5.3",
     "scipy>=1.15.2",
-    "sentencepiece>=0.2.0",
+    "sentencepiece>=0.2.1", # security: heap overflow fix
     "torch>=2.7.0",
     "transformers>=4.51.3",
 ]
