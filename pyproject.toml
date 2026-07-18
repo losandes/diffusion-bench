@@ -17,8 +17,11 @@ dependencies = [
     "safetensors>=0.5.3",
     "scipy>=1.15.2",
     "sentencepiece>=0.2.1", # security: heap overflow fix
-    "torch>=2.7.0",
-    "transformers>=4.51.3",
+    "torch>=2.8.0",         # security: improper resource shutdown fix
+    # security: ReDoS fixes land in 4.53. Held <5 to avoid the breaking
+    # transformers-5/huggingface-hub-1 migration; the two RCE advisories that
+    # need 5.x require loading untrusted models and are tracked separately.
+    "transformers>=4.57.0,<5",
 ]
 
 [tool.uv.sources]
