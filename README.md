@@ -6,99 +6,149 @@ This is a bench for learning about prompt engineering when using text-to-image a
 
 ## Installation
 
-If you don't have [asdf](https://github.com/asdf-vm/asdf#asdf--) (language version manager) and [direnv]() installed, start with that:
+This project uses [uv](https://github.com/astral-sh/uv) to manage the Python
+version, the virtual environment, and dependencies. If you don't have [uv](https://github.com/astral-sh/uv?tab=readme-ov-file#installation)
+and [direnv](https://direnv.net/) installed, start with that:
 
 ```shell
-# Install python using asdf or your
-# chosen version manager
-brew install asdf direnv
-asdf plugin add python https://github.com/danhper/asdf-python.git
-asdf install python 3.10.13
+# install uv (see the uv docs for other install methods)
+brew install uv direnv
 
-# configure the version of python to use
-asdf local python 3.10.13
-# or asdf global python 3.10.13
-# Note: when using local a ".tool-versions" file is created
+# uv reads the pinned interpreter from .tool-versions (3.12.9)
+# and will install it for you on the first sync
+uv python install 3.12.9
 ```
 
-Then you can create an install the virtual environment with direnv:
+Then you can create the virtual environment and install packages with direnv:
 
 ```shell
 # configure your ENVVARS
-# (open the .envrc file and make necessary changes)
-cp .envrc-example .envrc
+# (open the .envrc.local file and make necessary changes)
+cp .envrc.local-example .envrc.local
 
-# create the venv, install packages, and enable ENVVARS
+# create the venv (.venv), run `uv sync`, and enable ENVVARS
 direnv allow .
-# If you don't want to use direnv, read the .envrc-example
-# file and execute most of those commands using your
-# preferred method
+# If you don't want to use direnv, read the .envrc file and
+# run those commands (mainly `uv sync`) using your preferred method
 ```
 
 #### Installation Notes
 
-Make sure to keep the requirements.txt up to date when adding dependencies:
+Dependencies are declared in `pyproject.toml` and locked in `uv.lock`. To add a
+dependency, use `uv add`, which updates both files:
 
 ```shell
-python3 -m pip install scipy
-python3 -m pip freeze > requirements.txt
+uv add scipy
 ```
 
-The original install to produce that requirements.txt was:
+`uv sync` (run automatically by `.envrc`) installs everything from the lockfile.
+To upgrade locked versions, use `uv lock --upgrade` followed by `uv sync`.
 
-```shell
-python3 -m pip install --upgrade transformers sentencepiece \
-               diffusers ipykernel invisible_watermark \
-               accelerate safetensors torch ipyplot scipy
-```
-
-If you want to use TencentARC/t2i-adapter-lineart-sdxl-1.0, it needs a different version of diffusers and controlnet_aux for conditioning models and detectors:
-
-```shell
-python3 -m pip uninstall diffusers
-python3 -m pip install --upgrade \
-  git+https://github.com/huggingface/diffusers.git
-python3 -m pip install --upgrade controlnet_aux==0.0.7
-```
+This project pins `diffusers` to the HuggingFace `main` branch (via
+`[tool.uv.sources]` in `pyproject.toml`) so the latest conditioning models and
+detectors — including TencentARC/t2i-adapter-lineart-sdxl-1.0 — are available.
 
 ## Usage
 
 ```shell
-python3 -m src [-h] [-p PROMPT] [-n NEGATIVE_PROMPT]
-  [-x WIDTH] [-y HEIGHT] [-c COUNT] [-s SEEDS] [-m MODELS]
-  [-r STEPS] [-o OUTPUT_PATH] [-t OUTPUT_PATH_TEMPLATE]
-  [-i INPUT_PATHS] [-a REFINEMENT_MODE] [-d DEVICE_TYPE]
-```
+python3 -m src [-h] [--prompt PROMPT] [--negative_prompt NEGATIVE_PROMPT]
+               [--width WIDTH] [--height HEIGHT] [--count COUNT]
+               [--seeds SEEDS] [--models MODELS]
+               [--custom_latents CUSTOM_LATENTS] [--steps STEPS]
+               [--output_path OUTPUT_PATH]
+               [--output_path_template OUTPUT_PATH_TEMPLATE]
+               [--input_paths INPUT_PATHS] [--device_type DEVICE_TYPE]
+               [--refinement_mode REFINEMENT_MODE] [--copyright COPYRIGHT]
 
 options:
+  -h, --help            show this help message and exit
+  --prompt PROMPT, -p PROMPT
+                        A pipe-delimited list of descriptions of what you would
+                        like to render
+  --negative_prompt NEGATIVE_PROMPT, -n NEGATIVE_PROMPT
+                        A pipe-delimited list of descriptions of what you would NOT like to render (default=None)
+  --width WIDTH, -x WIDTH
+                        The width of the output image (default=896)
+  --height HEIGHT, -y HEIGHT
+                        The height of the output image (default=640)
+  --count COUNT, -c COUNT
+                        The number of images to produce with each given model
+                        (default=1)
+  --seeds SEEDS, -s SEEDS
+                        A comma-separated list of PRNGs to use when generating an
+                        image to produce more predictable results and explore an
+                        idea
+  --models MODELS, -m MODELS
+                        A comma-separated list of HuggingFace Models to to use. By
+                        default, dreamlike-art/dreamlike-photoreal-2.0 is used to
+                        generate an image followed by 3, sequential steps of
+                        refinement using stabilityai/stable-diffusion-xl-
+                        refiner-1.0
+  --custom_latents CUSTOM_LATENTS, -l CUSTOM_LATENTS
+                        A comma-separated list of booleans: whether or not to use
+                        custom latents (seeds) for each model
+  --steps STEPS, -r STEPS
+                        A comma-separated list of the number inference steps to use
+                        with each model (length must match the length of -m)
+  --output_path OUTPUT_PATH, -o OUTPUT_PATH
+                        A path to a folder where images will be saved (can be
+                        relative)
+  --output_path_template OUTPUT_PATH_TEMPLATE, -t OUTPUT_PATH_TEMPLATE
+                        A template for naming the files
+                        (default=":path/:count_idx-:type-:model_idx.png")
+  --input_paths INPUT_PATHS, -i INPUT_PATHS
+                        A comma-separated list of paths to images that will be
+                        refined or upscaled by the given models
+  --device_type DEVICE_TYPE, -d DEVICE_TYPE
+                        The type of device the pipes will be fed to for processing
+                        (default="cuda" if cuda is supported, else "mps" if apple
+                        M1/M2, else "cpu")
+  --refinement_mode REFINEMENT_MODE
+                        one of: "sequence" (each pass is fed into the next pass),
+                        "first_to_many" (each pass is fed the first item
+                        generated), or "in_to_many" (each pass is fed the value of
+                        -i/--input_paths)
+  --copyright COPYRIGHT
+                        Set who should be listed as the copyright owner of the
+                        images that are created
+```
 
-- `-h`, `--help`: show this help message and exit
-- `-p`, `--prompt`: A pipe-delimited list of descriptions of what you would like to render
-- `-n`, `--negative_prompt`: A pipe-delimited list of descriptions of what you would NOT like to render (default=None)
-- `-x`, `--width`: The width of the output image (default=896)
-- `-y`, `--height`: The height of the output image (default=640)
-- `-c`, `--count`: The number of images to produce with each given model (default=1)
-- `-s`, `--seeds`: A comma-separated list of PRNGs to use when generating an image to produce more predictable results and explore an idea
-- `-m`, `--models`: A comma-separated list of HuggingFace Models to to use. (default= dreamlike-art/dreamlike-photoreal-2.0 is used to generate an image followed by 3, sequential steps of refinement using stabilityai/stable-diffusion-xl-refiner-1.0)
-- `-r`, `--steps`: A comma-separated list of the number inference steps to use with each model (length must match the length of -m)
-- `-o`, `--output_path`: A path to a folder where images will be saved (can be relative)
-- `-t`, `--output_path_template`: A template for naming the files (default=":path/:count_idx-:type-:model_idx.png")
-- `-i`, `--input_paths`: A comma-separated list of paths to images that will be refined or upscaled by the given models
-- `-d`, `--device_type` The type of device the pipes will be fed to for processing (default="cuda" if cuda is supported, else "mps" if apple M1/M2, else "cpu")
-- `--refinement_mode`: one of:
-  - "sequence" (each pass is fed into the next pass),
-  - "first_to_many" (each pass is fed the first item generated),
-  - "in_to_many" (each pass is fed the value of -i/--input_paths)
-- `--copyright`: Who should be granted ownership of this image
+### Running in the background (limiting CPU usage)
+
+Generation is resource-hungry and can make the machine hard to use for anything
+else. `run.sh` wraps `python3 -m src` to run it as a lower-priority job: it still
+gets most of the CPU when the machine is idle, but yields to interactive work,
+and it leaves a couple of cores free for the system. All arguments are passed
+straight through:
+
+```shell
+./run.sh --prompt "a cute, tabby cat" \
+  --models "dreamlike-art/dreamlike-photoreal-2.0" \
+  --steps "10"
+
+# run it detached and log output:
+./run.sh --prompt "a cute, tabby cat" --models "..." --steps "10" > run.log 2>&1 &
+```
+
+Tunables (override via environment):
+
+- `DIFFUSION_BENCH_LEAVE_FREE` — cores to leave free for the system (default: `2`)
+- `DIFFUSION_BENCH_NICE` — scheduling priority; higher yields more (default: `15`)
+- `PYTORCH_MPS_HIGH_WATERMARK_RATIO` — Apple Silicon only. Caps how much unified
+  memory MPS may use so the GPU/UI stays responsive and the machine doesn't swap.
+  Unset by default because too low will OOM large models (e.g. HiDream); try `0.7`
+  for the smaller SD / dreamlike models.
 
 models:
 
 - [wavymulder/Analog-Diffusion](https://huggingface.co/wavymulder/Analog-Diffusion)
     - NOTE: you have to use "analog style" in the prompt for this to take effect
+    - To use a EulerAncestralDiscreteScheduler append "/EulerA" to the model name: "wavymulder/Analog-Diffusion/EulerA"
 - [Deci/DeciDiffusion-v1-0](https://huggingface.co/Deci/DeciDiffusion-v1-0)
 - [dreamlike-art/dreamlike-photoreal-2.0](https://huggingface.co/dreamlike-art/dreamlike-photoreal-2.0)
 - [prompthero/openjourney](https://huggingface.co/prompthero/openjourney)
 - [stabilityai/stable-diffusion-2-1](https://huggingface.co/stabilityai/stable-diffusion-2-1)
+- [stabilityai/stable-diffusion-2-depth](https://huggingface.co/stabilityai/stable-diffusion-2-depth)
 - [stabilityai/stable-diffusion-x4-upscaler](https://huggingface.co/stabilityai/stable-diffusion-x4-upscaler)
 - [stabilityai/stable-diffusion-xl-base-1.0](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0)
 - [stabilityai/stable-diffusion-xl-refiner-1.0](https://huggingface.co/stabilityai/stable-diffusion-xl-refiner-1.0)

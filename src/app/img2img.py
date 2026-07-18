@@ -23,16 +23,26 @@ def _refine (
     print(f"prompt: {prompt}")
     print(f"kwargs: {kwargs}")
     print(f"seed:   {seeds[i]}")
+    print(f"input:  {in_paths}")
     print(f"image:  {out_paths[i]}")
     print("")
 
     image = load_image(in_paths[i])
-    refined = model['pipe'](
-      prompt,
-      image=image,
-      latents=latents[i],
-      **kwargs,
-    ).images[0]
+    refined = None
+
+    if model['supports_latents'] is True:
+      refined = model['pipe'](
+        prompt,
+        image=image,
+        latents=latents[i],
+        **kwargs,
+      ).images[0]
+    else:
+      refined = model['pipe'](
+        prompt,
+        image=image,
+        **kwargs,
+      ).images[0]
     images.append([out_paths[i], refined])
 
     if out_paths[i] is not None:

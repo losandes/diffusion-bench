@@ -22,7 +22,10 @@ def split_to_list (delimiter):
       raw_output = maybe_string.split(delimiter)
 
     for idx, item in enumerate(raw_output):
-      output.append(item.strip())
+      item = item.strip()
+
+      if item != "" and item != None:
+        output.append(item.strip())
 
     return output
   return split

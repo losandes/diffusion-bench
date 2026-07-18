@@ -1,0 +1,25 @@
+[project]
+name = "diffusion-bench"
+version = "0.1.0"
+description = "A bench for learning about prompt engineering when using text-to-image and image-to-image diffusion models."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "accelerate>=1.6.0",
+    "controlnet-aux>=0.0.9",
+    "diffusers",
+    "invisible-watermark>=0.2.0",
+    "ipykernel>=6.29.5",
+    "ipyplot>=1.1.2",
+    "mediapipe>=0.10.21",
+    "pillow>=11.2.1",
+    "requests>=2.32.3",
+    "safetensors>=0.5.3",
+    "scipy>=1.15.2",
+    "sentencepiece>=0.2.0",
+    "torch>=2.7.0",
+    "transformers>=4.51.3",
+]
+
+[tool.uv.sources]
+diffusers = { git = "https://github.com/huggingface/diffusers.git" }

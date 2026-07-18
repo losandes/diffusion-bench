@@ -1,0 +1,2 @@
+# Extend the python path to include the src directory
+export PYTHONPATH="${PYTHONPATH}:/Users/[name]/.../diffusion-bench/src"
