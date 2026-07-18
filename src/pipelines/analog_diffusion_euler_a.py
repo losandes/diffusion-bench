@@ -8,7 +8,7 @@ def makePipelines (device):
 
   NOTE: You have to use "analog style" in the prompt for this to take effect
   """
-  [model_id, pipe] = analog_diffusion.makePipelines
+  [model_id, pipe] = analog_diffusion.makePipelines(device)
   pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(pipe.scheduler.config)
 
   return [model_id, pipe]

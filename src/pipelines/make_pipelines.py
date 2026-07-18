@@ -27,10 +27,10 @@ PIPELINES = {
     },
     "HiDream-ai/HiDream-E1-Full": {
         "short_name": "hidream-e1",
-        "type": GENERATOR,
+        "type": REFINER,  # editing / any-to-any model: needs an input image (img2img)
         "factory": hidreamE1.makePipelines,
         "in_channels": None,
-        "supports_latents": True,
+        "supports_latents": False,
     },
     "wavymulder/Analog-Diffusion": {
         "short_name": "analog",

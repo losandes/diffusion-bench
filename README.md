@@ -6,60 +6,47 @@ This is a bench for learning about prompt engineering when using text-to-image a
 
 ## Installation
 
-If you don't have [asdf](https://github.com/asdf-vm/asdf#asdf--) (language version manager) and [direnv]() installed, start with that:
+This project uses [uv](https://github.com/astral-sh/uv) to manage the Python
+version, the virtual environment, and dependencies. If you don't have [uv](https://github.com/astral-sh/uv?tab=readme-ov-file#installation)
+and [direnv](https://direnv.net/) installed, start with that:
 
 ```shell
-# Install python using asdf or your
-# chosen version manager
-brew install asdf direnv
-asdf plugin add python https://github.com/danhper/asdf-python.git
-asdf install python 3.10.13
+# install uv (see the uv docs for other install methods)
+brew install uv direnv
 
-# configure the version of python to use
-asdf local python 3.10.13
-# or asdf global python 3.10.13
-# Note: when using local a ".tool-versions" file is created
+# uv reads the pinned interpreter from .tool-versions (3.12.9)
+# and will install it for you on the first sync
+uv python install 3.12.9
 ```
 
-Then you can create an install the virtual environment with direnv:
+Then you can create the virtual environment and install packages with direnv:
 
 ```shell
 # configure your ENVVARS
-# (open the .envrc file and make necessary changes)
+# (open the .envrc.local file and make necessary changes)
 cp .envrc.local-example .envrc.local
 
-# create the venv, install packages, and enable ENVVARS
+# create the venv (.venv), run `uv sync`, and enable ENVVARS
 direnv allow .
-# If you don't want to use direnv, read the .envrc-example
-# file and execute most of those commands using your
-# preferred method
+# If you don't want to use direnv, read the .envrc file and
+# run those commands (mainly `uv sync`) using your preferred method
 ```
 
 #### Installation Notes
 
-Make sure to keep the requirements.txt up to date when adding dependencies:
+Dependencies are declared in `pyproject.toml` and locked in `uv.lock`. To add a
+dependency, use `uv add`, which updates both files:
 
 ```shell
-python3 -m pip install scipy
-python3 -m pip freeze > requirements.txt
+uv add scipy
 ```
 
-The original install to produce that requirements.txt was:
+`uv sync` (run automatically by `.envrc`) installs everything from the lockfile.
+To upgrade locked versions, use `uv lock --upgrade` followed by `uv sync`.
 
-```shell
-python3 -m pip install --upgrade transformers sentencepiece \
-               diffusers ipykernel invisible_watermark \
-               accelerate safetensors torch ipyplot scipy controlnet_aux
-```
-
-If you want to use TencentARC/t2i-adapter-lineart-sdxl-1.0, it needs a different version of diffusers and controlnet_aux for conditioning models and detectors:
-
-```shell
-python3 -m pip uninstall diffusers
-python3 -m pip install --upgrade \
-  git+https://github.com/huggingface/diffusers.git
-python3 -m pip install --upgrade controlnet_aux==0.0.7
-```
+This project pins `diffusers` to the HuggingFace `main` branch (via
+`[tool.uv.sources]` in `pyproject.toml`) so the latest conditioning models and
+detectors — including TencentARC/t2i-adapter-lineart-sdxl-1.0 — are available.
 
 ## Usage
 
@@ -125,6 +112,32 @@ options:
                         Set who should be listed as the copyright owner of the
                         images that are created
 ```
+
+### Running in the background (limiting CPU usage)
+
+Generation is resource-hungry and can make the machine hard to use for anything
+else. `run.sh` wraps `python3 -m src` to run it as a lower-priority job: it still
+gets most of the CPU when the machine is idle, but yields to interactive work,
+and it leaves a couple of cores free for the system. All arguments are passed
+straight through:
+
+```shell
+./run.sh --prompt "a cute, tabby cat" \
+  --models "dreamlike-art/dreamlike-photoreal-2.0" \
+  --steps "10"
+
+# run it detached and log output:
+./run.sh --prompt "a cute, tabby cat" --models "..." --steps "10" > run.log 2>&1 &
+```
+
+Tunables (override via environment):
+
+- `DIFFUSION_BENCH_LEAVE_FREE` — cores to leave free for the system (default: `2`)
+- `DIFFUSION_BENCH_NICE` — scheduling priority; higher yields more (default: `15`)
+- `PYTORCH_MPS_HIGH_WATERMARK_RATIO` — Apple Silicon only. Caps how much unified
+  memory MPS may use so the GPU/UI stays responsive and the machine doesn't swap.
+  Unset by default because too low will OOM large models (e.g. HiDream); try `0.7`
+  for the smaller SD / dreamlike models.
 
 models:
 
