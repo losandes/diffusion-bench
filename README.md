@@ -26,7 +26,7 @@ Then you can create an install the virtual environment with direnv:
 ```shell
 # configure your ENVVARS
 # (open the .envrc file and make necessary changes)
-cp .envrc-example .envrc
+cp .envrc.local-example .envrc.local
 
 # create the venv, install packages, and enable ENVVARS
 direnv allow .
@@ -49,7 +49,7 @@ The original install to produce that requirements.txt was:
 ```shell
 python3 -m pip install --upgrade transformers sentencepiece \
                diffusers ipykernel invisible_watermark \
-               accelerate safetensors torch ipyplot scipy
+               accelerate safetensors torch ipyplot scipy controlnet_aux
 ```
 
 If you want to use TencentARC/t2i-adapter-lineart-sdxl-1.0, it needs a different version of diffusers and controlnet_aux for conditioning models and detectors:
@@ -64,41 +64,78 @@ python3 -m pip install --upgrade controlnet_aux==0.0.7
 ## Usage
 
 ```shell
-python3 -m src [-h] [-p PROMPT] [-n NEGATIVE_PROMPT]
-  [-x WIDTH] [-y HEIGHT] [-c COUNT] [-s SEEDS] [-m MODELS]
-  [-r STEPS] [-o OUTPUT_PATH] [-t OUTPUT_PATH_TEMPLATE]
-  [-i INPUT_PATHS] [-a REFINEMENT_MODE] [-d DEVICE_TYPE]
-```
+python3 -m src [-h] [--prompt PROMPT] [--negative_prompt NEGATIVE_PROMPT]
+               [--width WIDTH] [--height HEIGHT] [--count COUNT]
+               [--seeds SEEDS] [--models MODELS]
+               [--custom_latents CUSTOM_LATENTS] [--steps STEPS]
+               [--output_path OUTPUT_PATH]
+               [--output_path_template OUTPUT_PATH_TEMPLATE]
+               [--input_paths INPUT_PATHS] [--device_type DEVICE_TYPE]
+               [--refinement_mode REFINEMENT_MODE] [--copyright COPYRIGHT]
 
 options:
-
-- `-h`, `--help`: show this help message and exit
-- `-p`, `--prompt`: A pipe-delimited list of descriptions of what you would like to render
-- `-n`, `--negative_prompt`: A pipe-delimited list of descriptions of what you would NOT like to render (default=None)
-- `-x`, `--width`: The width of the output image (default=896)
-- `-y`, `--height`: The height of the output image (default=640)
-- `-c`, `--count`: The number of images to produce with each given model (default=1)
-- `-s`, `--seeds`: A comma-separated list of PRNGs to use when generating an image to produce more predictable results and explore an idea
-- `-m`, `--models`: A comma-separated list of HuggingFace Models to to use. (default= dreamlike-art/dreamlike-photoreal-2.0 is used to generate an image followed by 3, sequential steps of refinement using stabilityai/stable-diffusion-xl-refiner-1.0)
-- `-r`, `--steps`: A comma-separated list of the number inference steps to use with each model (length must match the length of -m)
-- `-o`, `--output_path`: A path to a folder where images will be saved (can be relative)
-- `-t`, `--output_path_template`: A template for naming the files (default=":path/:count_idx-:type-:model_idx.png")
-- `-i`, `--input_paths`: A comma-separated list of paths to images that will be refined or upscaled by the given models
-- `-d`, `--device_type` The type of device the pipes will be fed to for processing (default="cuda" if cuda is supported, else "mps" if apple M1/M2, else "cpu")
-- `--refinement_mode`: one of:
-  - "sequence" (each pass is fed into the next pass),
-  - "first_to_many" (each pass is fed the first item generated),
-  - "in_to_many" (each pass is fed the value of -i/--input_paths)
-- `--copyright`: Who should be granted ownership of this image
+  -h, --help            show this help message and exit
+  --prompt PROMPT, -p PROMPT
+                        A pipe-delimited list of descriptions of what you would
+                        like to render
+  --negative_prompt NEGATIVE_PROMPT, -n NEGATIVE_PROMPT
+                        A pipe-delimited list of descriptions of what you would NOT like to render (default=None)
+  --width WIDTH, -x WIDTH
+                        The width of the output image (default=896)
+  --height HEIGHT, -y HEIGHT
+                        The height of the output image (default=640)
+  --count COUNT, -c COUNT
+                        The number of images to produce with each given model
+                        (default=1)
+  --seeds SEEDS, -s SEEDS
+                        A comma-separated list of PRNGs to use when generating an
+                        image to produce more predictable results and explore an
+                        idea
+  --models MODELS, -m MODELS
+                        A comma-separated list of HuggingFace Models to to use. By
+                        default, dreamlike-art/dreamlike-photoreal-2.0 is used to
+                        generate an image followed by 3, sequential steps of
+                        refinement using stabilityai/stable-diffusion-xl-
+                        refiner-1.0
+  --custom_latents CUSTOM_LATENTS, -l CUSTOM_LATENTS
+                        A comma-separated list of booleans: whether or not to use
+                        custom latents (seeds) for each model
+  --steps STEPS, -r STEPS
+                        A comma-separated list of the number inference steps to use
+                        with each model (length must match the length of -m)
+  --output_path OUTPUT_PATH, -o OUTPUT_PATH
+                        A path to a folder where images will be saved (can be
+                        relative)
+  --output_path_template OUTPUT_PATH_TEMPLATE, -t OUTPUT_PATH_TEMPLATE
+                        A template for naming the files
+                        (default=":path/:count_idx-:type-:model_idx.png")
+  --input_paths INPUT_PATHS, -i INPUT_PATHS
+                        A comma-separated list of paths to images that will be
+                        refined or upscaled by the given models
+  --device_type DEVICE_TYPE, -d DEVICE_TYPE
+                        The type of device the pipes will be fed to for processing
+                        (default="cuda" if cuda is supported, else "mps" if apple
+                        M1/M2, else "cpu")
+  --refinement_mode REFINEMENT_MODE
+                        one of: "sequence" (each pass is fed into the next pass),
+                        "first_to_many" (each pass is fed the first item
+                        generated), or "in_to_many" (each pass is fed the value of
+                        -i/--input_paths)
+  --copyright COPYRIGHT
+                        Set who should be listed as the copyright owner of the
+                        images that are created
+```
 
 models:
 
 - [wavymulder/Analog-Diffusion](https://huggingface.co/wavymulder/Analog-Diffusion)
     - NOTE: you have to use "analog style" in the prompt for this to take effect
+    - To use a EulerAncestralDiscreteScheduler append "/EulerA" to the model name: "wavymulder/Analog-Diffusion/EulerA"
 - [Deci/DeciDiffusion-v1-0](https://huggingface.co/Deci/DeciDiffusion-v1-0)
 - [dreamlike-art/dreamlike-photoreal-2.0](https://huggingface.co/dreamlike-art/dreamlike-photoreal-2.0)
 - [prompthero/openjourney](https://huggingface.co/prompthero/openjourney)
 - [stabilityai/stable-diffusion-2-1](https://huggingface.co/stabilityai/stable-diffusion-2-1)
+- [stabilityai/stable-diffusion-2-depth](https://huggingface.co/stabilityai/stable-diffusion-2-depth)
 - [stabilityai/stable-diffusion-x4-upscaler](https://huggingface.co/stabilityai/stable-diffusion-x4-upscaler)
 - [stabilityai/stable-diffusion-xl-base-1.0](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0)
 - [stabilityai/stable-diffusion-xl-refiner-1.0](https://huggingface.co/stabilityai/stable-diffusion-xl-refiner-1.0)

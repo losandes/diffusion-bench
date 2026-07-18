@@ -6,6 +6,7 @@ from .get_arr_value import get_value_or_first, get_value_or_none
 from .get_device_type import get_device_type
 from .make_paths import make_all_paths, make_empty_paths, maybe_update_path, add_name_to_path, add_seed_to_path
 from .split_to_list import split_to_list
+from .str_to_list import maybe_str_to_list
 
 def parse_args ():
   """
@@ -15,19 +16,19 @@ def parse_args ():
   parser = argparse.ArgumentParser()
 
   # Adding optional argument
-  parser.add_argument("-p", "--prompt", help = "A pipe-delimited list of descriptions of what you would like to render")
-  parser.add_argument("-n", "--negative_prompt", help = "A pipe-delimited list of descriptions of what you would NOT like to render (default=None)")
-  parser.add_argument("-x", "--width", help = "The width of the output image (default=896)")
-  parser.add_argument("-y", "--height", help = "The height of the output image (default=640)")
-  parser.add_argument("-c", "--count", help = "The number of images to produce with each given model (default=1)")
-  parser.add_argument("-s", "--seeds", help = "A comma-separated list of PRNGs to use when generating an image to produce more predictable results and explore an idea")
-  parser.add_argument("-m", "--models", help = "A comma-separated list of HuggingFace Models to to use. By default, dreamlike-art/dreamlike-photoreal-2.0 is used to generate an image followed by 3, sequential steps of refinement using stabilityai/stable-diffusion-xl-refiner-1.0")
-  parser.add_argument("-l", "--custom_latents", help = "A comma-separated list of booleans: whether or not to use custom latents (seeds) for each model")
-  parser.add_argument("-r", "--steps", help = "A comma-separated list of the number inference steps to use with each model (length must match the length of -m)")
-  parser.add_argument("-o", "--output_path", help = "A path to a folder where images will be saved (can be relative)")
-  parser.add_argument("-t", "--output_path_template", help = "A template for naming the files (default=\":path/:count_idx-:type-:model_idx.png\")")
-  parser.add_argument("-i", "--input_paths", help = "A comma-separated list of paths to images that will be refined or upscaled by the given models")
-  parser.add_argument("-d", "--device_type", help = "The type of device the pipes will be fed to for processing (default=\"cuda\" if cuda is supported, else \"mps\" if apple M1/M2, else \"cpu\")")
+  parser.add_argument("--prompt", "-p", help = "A pipe-delimited list of descriptions of what you would like to render")
+  parser.add_argument("--negative_prompt", "-n", help = "A pipe-delimited list of descriptions of what you would NOT like to render (default=None)")
+  parser.add_argument("--width", "-x", help = "The width of the output image (default=896)")
+  parser.add_argument("--height", "-y", help = "The height of the output image (default=640)")
+  parser.add_argument("--count", "-c", help = "The number of images to produce with each given model (default=1)")
+  parser.add_argument("--seeds", "-s", help = "A comma-separated list of PRNGs to use when generating an image to produce more predictable results and explore an idea")
+  parser.add_argument("--models", "-m", help = "A comma-separated list of HuggingFace Models to to use. By default, dreamlike-art/dreamlike-photoreal-2.0 is used to generate an image followed by 3, sequential steps of refinement using stabilityai/stable-diffusion-xl-refiner-1.0")
+  parser.add_argument("--custom_latents", "-l", help = "A comma-separated list of booleans: whether or not to use custom latents (seeds) for each model")
+  parser.add_argument("--steps", "-r", help = "A comma-separated list of the number inference steps to use with each model (length must match the length of -m)")
+  parser.add_argument("--output_path", "-o", help = "A path to a folder where images will be saved (can be relative)")
+  parser.add_argument("--output_path_template", "-t", help = "A template for naming the files (default=\":path/:count_idx-:type-:model_idx.png\")")
+  parser.add_argument("--input_paths", "-i", help = "A comma-separated list of paths to images that will be refined or upscaled by the given models")
+  parser.add_argument("--device_type", "-d", help = "The type of device the pipes will be fed to for processing (default=\"cuda\" if cuda is supported, else \"mps\" if apple M1/M2, else \"cpu\")")
   parser.add_argument("--refinement_mode", help = "one of: \"sequence\" (each pass is fed into the next pass), \"first_to_many\" (each pass is fed the first item generated), or \"in_to_many\" (each pass is fed the value of -i/--input_paths)")
   parser.add_argument("--copyright", help = "Set who should be listed as the copyright owner of the images that are created")
 
@@ -35,8 +36,6 @@ def parse_args ():
   # - "sequence" (each pass is fed into the next pass)
   # - "first_to_many" (each pass is fed the first item generated)
   # - "in_to_many" (each pass is fed the value of -i/--input_paths)
-
-  # TODO: Add option to turn off custom latents
 
   # Read arguments from command line
   return parser.parse_args()
@@ -124,7 +123,7 @@ def with_args (**kwargs):
     "latents": latents,
     "seeds": seeds,
     "steps": int(kwargs['steps'] if 'steps' in kwargs else 10),
-    "input_paths": input_paths,
+    "input_paths": maybe_str_to_list(input_paths),
     "output_paths": output_paths,
     "device_type": device_type,
     "copyright": kwargs['copyright'] if 'copyright' in kwargs else 'losandes/diffusion-bench',
@@ -166,8 +165,6 @@ def map_terminal_input (args):
   passes = []
 
   for idx, _model_id in enumerate(MODEL_IDS):
-    previous_pass = None if idx == 0 else passes[idx - 1]
-
     item = with_args(
       prompt=get_value_or_first(PROMPT, idx),
       negative_prompt=get_value_or_first(NEGATIVE_PROMPT, idx),
@@ -178,10 +175,10 @@ def map_terminal_input (args):
       model_id=get_value_or_none(MODEL_IDS, idx),
       custom_latents=get_value_or_first(CUSTOM_LATENTS, idx),
       steps=get_value_or_none(STEPS, idx),
-      input_paths=get_value_or_none(INPUT_PATHS, idx),
+      input_paths=maybe_str_to_list(get_value_or_none(INPUT_PATHS, idx)),
       output_paths=get_value_or_none(OUTPUT_PATHS, idx),
       device_type=DEVICE,
-      previous_pass=previous_pass,
+      previous_pass=None if idx == 0 else passes[idx - 1],
       copyright=COPYRIGHT,
       models=MODELS,
     )
