@@ -1,0 +1,34 @@
+# Dependabot keeps dependencies patched against known vulnerabilities.
+# Docs: https://docs.github.com/code-security/dependabot/dependabot-version-updates
+#
+# This project uses uv (pyproject.toml + uv.lock), so we use the native "uv"
+# ecosystem. Version constraints in pyproject.toml are respected — e.g.
+# `transformers<5` keeps Dependabot on the 4.x line, and `mediapipe` caps
+# `protobuf<5`. Loosen those pins when you're ready to take a major upgrade.
+version: 2
+updates:
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    # Bundle low-risk updates into a couple of PRs instead of one per package.
+    groups:
+      # Patch/minor bumps across the board — usually safe to merge together.
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+      # The ML stack moves fast and can break together; review it as a unit.
+      ml-stack:
+        patterns:
+          - "torch"
+          - "torchvision"
+          - "transformers"
+          - "diffusers"
+          - "accelerate"
+          - "safetensors"
+          - "tokenizers"
+          - "huggingface-hub"
+        update-types:
+          - "major"
