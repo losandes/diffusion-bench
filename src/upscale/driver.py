@@ -26,12 +26,12 @@ def _target_size(src_w, src_h, to, scale, native_scale):
     """
     Computes the exact output size.
 
-    to (h, w)?   - fit within this box, preserving aspect ratio (may upscale)
+    to (w, h)?   - fit within this box, preserving aspect ratio (may upscale)
     scale (float)? - multiply source dimensions
     else         - use the backend's native scale factor
     """
     if to is not None:
-        box_h, box_w = to
+        box_w, box_h = to
         factor = min(box_w / src_w, box_h / src_h)
     elif scale is not None:
         factor = scale

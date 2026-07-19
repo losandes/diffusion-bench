@@ -44,11 +44,11 @@ then Lanczos-resizes to the exact target, and handles I/O identically for images
 ```shell
 python3 -m src.upscale -i INPUT -o OUTDIR --upscaler realesrgan \
   --scale 2                 # multiplier, OR
-  --to 1920x1080            # target as HEIGHTxWIDTH (aspect-preserved box)
+  --to 1920x1080            # target as WIDTHxHEIGHT (aspect-preserved box)
   [--fps N] [--max_frames N]  # video only
   [--weights PATH]            # override Real-ESRGAN weights
 ```
-- `--to` is **HEIGHTxWIDTH** (height first). Fit within the box, aspect preserved.
+- `--to` is **WIDTHxHEIGHT** (width first). Fit within the box, aspect preserved.
 - target = `--to` or `--scale`; if neither, the backend's native scale.
 - Output: image -> upscaled image; video -> upscaled `.mp4` + `.json` sidecar.
 

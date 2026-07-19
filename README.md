@@ -209,7 +209,7 @@ not part of the generation pipeline, and works on both **images and video**.
 Upscale options:
 
 - `--upscaler` / `-u` — `realesrgan` (default; sharp, deterministic) or `lanczos` (soft, free fallback)
-- `--to` — target size as **HEIGHTxWIDTH** (e.g. `1920x1080`), aspect preserved
+- `--to` — target size as **WIDTHxHEIGHT** (e.g. `1920x1080`), aspect preserved
 - `--scale` — multiplier (e.g. `2`); used when `--to` is omitted
 - `--fps` / `--max_frames` — video only
 - `--weights` — override the Real-ESRGAN weights (e.g. an anime variant); the

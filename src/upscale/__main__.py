@@ -14,12 +14,12 @@ from .registry import UPSCALERS, get_upscaler
 
 
 def _parse_to(value):
-    """Parse a --to spec 'HEIGHTxWIDTH' (height first) into (height, width)."""
+    """Parse a --to spec 'WIDTHxHEIGHT' (width first) into (width, height)."""
     if value is None:
         return None
     parts = value.lower().split("x")
     if len(parts) != 2 or not all(p.strip().isdigit() for p in parts):
-        raise Exception(f"--to must be HEIGHTxWIDTH (e.g. 1920x1080), got {value!r}")
+        raise Exception(f"--to must be WIDTHxHEIGHT (e.g. 1920x1080), got {value!r}")
     return int(parts[0]), int(parts[1])
 
 
@@ -35,7 +35,7 @@ def main():
     parser.add_argument("--output_path", "-o", default="images", help="Directory to write results (default=images)")
     parser.add_argument("--upscaler", "-u", default="realesrgan", choices=UPSCALERS, help="Upscaler backend (default=realesrgan)")
     parser.add_argument("--scale", type=float, help="Upscale multiplier (e.g. 2). Ignored if --to is given")
-    parser.add_argument("--to", help="Target size as HEIGHTxWIDTH (e.g. 1920x1080), aspect-preserved")
+    parser.add_argument("--to", help="Target size as WIDTHxHEIGHT (e.g. 1920x1080), aspect-preserved")
     parser.add_argument("--weights", help="Path to model weights (overrides the backend default / auto-download)")
     parser.add_argument("--fps", type=float, help="Target output fps for video (default: source fps)")
     parser.add_argument("--max_frames", type=int, help="Cap on frames processed from a video")
