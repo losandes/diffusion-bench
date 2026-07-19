@@ -12,6 +12,7 @@ each frame is refined independently, which is cheap but flickers.
 """
 import os
 
+from ..constants import VID2VID
 from ..files.video import VideoWriter, probe, read_frames, write_sidecar
 
 
@@ -79,6 +80,85 @@ def transform_video(
     return out_path, count
 
 
+def _coherent_run(options, in_path, out_path):
+    """
+    Temporally-coherent path (AnimateDiff). Reads the clip as a single window of
+    frames and transforms them in one pipeline call, so the MotionAdapter's
+    temporal layers keep the output consistent frame-to-frame.
+
+    This is single-window: the whole (bounded) clip must fit in memory. Arbitrary
+    length via overlapping windows + blend is Phase 3 (pipelines/windowing.py);
+    until then, bound the clip with --max_frames and downscale with -x/-y.
+    """
+    model = options["model"]
+    pipe = model["pipe"]
+
+    width = options.get("width")
+    height = options.get("height")
+    size = (width, height) if width and height else None
+
+    frames = list(
+        read_frames(
+            in_path,
+            fps=options.get("fps"),
+            max_frames=options.get("max_frames"),
+            size=size,
+        )
+    )
+    if not frames:
+        raise Exception(f"No frames decoded from {in_path}")
+
+    window_size = options.get("window_size") or 16
+    overlap = options.get("overlap") or 4
+
+    # FreeNoise gives long-range coherence when the clip exceeds one context
+    # window; for short clips a single context covers everything.
+    if len(frames) > window_size and hasattr(pipe, "enable_free_noise"):
+        pipe.enable_free_noise(context_length=window_size, context_stride=overlap)
+
+    kwargs = {
+        "num_inference_steps": options["steps"],
+        "negative_prompt": options.get("negative_prompt"),
+    }
+    if options.get("strength") is not None:
+        kwargs["strength"] = options["strength"]
+    if options.get("guidance_scale") is not None:
+        kwargs["guidance_scale"] = options["guidance_scale"]
+    if width and height:
+        kwargs["height"] = height
+        kwargs["width"] = width
+
+    result = pipe(video=frames, prompt=options["prompt"], **kwargs)
+    out_frames = result.frames[0]
+
+    source = probe(in_path)
+    out_fps = options.get("fps") or source["fps"] or 16
+
+    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+    with VideoWriter(out_path, fps=out_fps) as writer:
+        for frame in out_frames:
+            writer.append(frame)
+
+    write_sidecar(
+        out_path,
+        {
+            "prompt": options["prompt"],
+            "negative_prompt": options.get("negative_prompt"),
+            "model": model["name"],
+            "path": "coherent (animatediff, single-window)",
+            "steps": options["steps"],
+            "strength": options.get("strength"),
+            "guidance_scale": options.get("guidance_scale"),
+            "window_size": window_size,
+            "source": in_path,
+            "out_fps": out_fps,
+            "frames": len(out_frames),
+        },
+    )
+
+    return out_path, len(out_frames)
+
+
 def _naive_frame_transform(options):
     """
     Builds a per-frame img2img transform around the pass's pipeline. Each frame
@@ -130,6 +210,10 @@ def vid2vid(options, ensembleIdx=0):
     print(f"input:    {in_path}")
     print(f"output:   {out_path}")
     print("")
+
+    # AnimateDiff (VID2VID) models use the coherent path unless --naive is set.
+    if options["model"]["type"] == VID2VID and not options.get("naive"):
+        return _coherent_run(options, in_path, out_path)
 
     transform = _naive_frame_transform(options)
 

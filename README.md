@@ -141,10 +141,24 @@ Tunables (override via environment):
 
 ### Video-to-video (experimental)
 
-Transform an `.mp4` with a prompt. Pass a video to `-i/--input_paths`. The
-naive path (`--naive`) refines each frame independently with any img2img-capable
-model — it's cheap but flickers (no temporal coherence). The coherent
-AnimateDiff path is in progress; see `docs/plans/video-vid2vid.md`.
+Transform an `.mp4` with a prompt. Pass a video to `-i/--input_paths`.
+
+**Coherent (recommended) — AnimateDiff.** Use `-m guoyww/animatediff-v1-5-2`.
+A MotionAdapter keeps the output consistent frame-to-frame. It's SD1.5-based, so
+downscale to ~512px with `-x/-y`, and bound the clip with `--max_frames` (the
+whole window is processed in one pass; arbitrary-length windowing is Phase 3 —
+see `docs/plans/video-vid2vid.md`). First run downloads ~2.5GB of weights.
+
+```shell
+./run.sh --prompt "analog style, a tabby cat" \
+  --models "guoyww/animatediff-v1-5-2" \
+  --input_paths "clip.mp4" \
+  -x 512 -y 512 --strength 0.6 --guidance_scale 8.5 \
+  --fps 12 --max_frames 32
+```
+
+**Naive fallback.** `--naive` refines each frame independently with any
+img2img-capable model — cheap, but flickers (no temporal coherence).
 
 ```shell
 ./run.sh --prompt "analog style, a tabby cat" \
