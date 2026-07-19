@@ -144,10 +144,13 @@ Tunables (override via environment):
 Transform an `.mp4` with a prompt. Pass a video to `-i/--input_paths`.
 
 **Coherent (recommended) — AnimateDiff.** Use `-m guoyww/animatediff-v1-5-2`.
-A MotionAdapter keeps the output consistent frame-to-frame. It's SD1.5-based, so
-downscale to ~512px with `-x/-y`, and bound the clip with `--max_frames` (the
-whole window is processed in one pass; arbitrary-length windowing is Phase 3 —
-see `docs/plans/video-vid2vid.md`). First run downloads ~2.5GB of weights.
+A MotionAdapter keeps the output consistent frame-to-frame. It's SD1.5-based and
+its attention cost scales with resolution squared, so the processing size is
+auto-capped to 512px on the longest side (aspect-preserving); raise it with
+`DIFFUSION_BENCH_MAX_SIZE=768 ...` if you have the memory. Bound the clip with
+`--max_frames` (the whole window is processed in one pass; arbitrary-length
+windowing is Phase 3 — see `docs/plans/video-vid2vid.md`). First run downloads
+~2.5GB of weights.
 
 ```shell
 ./run.sh --prompt "analog style, a tabby cat" \

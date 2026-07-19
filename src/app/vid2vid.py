@@ -21,6 +21,17 @@ def _swap_ext(path, ext):
     return f"{root}.{ext.lstrip('.')}"
 
 
+def _fit_size(width, height, cap):
+    """
+    Scales (width, height) so the longest side is <= cap, preserving aspect
+    ratio, and rounds each dimension down to a multiple of 8 (VAE requirement).
+    Never upscales. Returns (width, height), each >= 8.
+    """
+    scale = min(1.0, cap / max(width, height))
+    fit = lambda n: max(8, int(n * scale) // 8 * 8)
+    return fit(width), fit(height)
+
+
 def _derive_output_path(options):
     """
     Picks an .mp4 output path. The image pipeline templates output names as
@@ -93,9 +104,20 @@ def _coherent_run(options, in_path, out_path):
     model = options["model"]
     pipe = model["pipe"]
 
-    width = options.get("width")
-    height = options.get("height")
-    size = (width, height) if width and height else None
+    # AnimateDiff is SD1.5-based and its spatial self-attention cost scales with
+    # (H*W)^2, so large frames blow up memory (e.g. 1280x1920 needs a ~1.4TB
+    # attention buffer). Cap the longest side and preserve aspect ratio; the cap
+    # is overridable for machines with more headroom.
+    cap = int(os.environ.get("DIFFUSION_BENCH_MAX_SIZE", "512"))
+    req_w = options.get("width") or cap
+    req_h = options.get("height") or cap
+    width, height = _fit_size(req_w, req_h, cap)
+    if (width, height) != (req_w, req_h):
+        print(
+            f"AnimateDiff: downscaling {req_w}x{req_h} -> {width}x{height} "
+            f"(SD1.5/MPS memory cap {cap}px; set DIFFUSION_BENCH_MAX_SIZE to change)"
+        )
+    size = (width, height)
 
     frames = list(
         read_frames(
@@ -124,9 +146,8 @@ def _coherent_run(options, in_path, out_path):
         kwargs["strength"] = options["strength"]
     if options.get("guidance_scale") is not None:
         kwargs["guidance_scale"] = options["guidance_scale"]
-    if width and height:
-        kwargs["height"] = height
-        kwargs["width"] = width
+    kwargs["height"] = height
+    kwargs["width"] = width
 
     result = pipe(video=frames, prompt=options["prompt"], **kwargs)
     out_frames = result.frames[0]
