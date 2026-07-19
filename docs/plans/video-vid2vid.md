@@ -52,7 +52,13 @@ decision is *which model* transforms the frames:
   override** (video pipes have no `.unet`; the `pipe.unet.config.in_channels`
   read at make_pipelines.py:157 would crash), `supports_latents=False`.
 
-### Phase 3 — windowing engine (`src/pipelines/windowing.py`) — the hard part
+### Phase 3 — windowing engine (`src/pipelines/windowing.py`) — DONE
+Overlapping-window streaming: `stitch()` slides a fixed window across the clip
+(bounded memory), crossfades `overlap` frames between windows, and re-seeds each
+window identically for style stability. `_coherent_run` streams frames through it
+to a `VideoWriter`. Constraint: `overlap <= window/2`. FreeNoise dropped in
+favor of explicit windowing. (Original design notes below.)
+
 - **Intra-window coherence:** AnimateDiff `FreeNoise` (noise reuse across a
   sliding context) — primary anti-flicker mechanism.
 - **Inter-window memory bound + seams:** overlapping windows (e.g. 16 frames,

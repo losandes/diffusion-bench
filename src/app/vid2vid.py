@@ -93,14 +93,21 @@ def transform_video(
 
 def _coherent_run(options, in_path, out_path):
     """
-    Temporally-coherent path (AnimateDiff). Reads the clip as a single window of
-    frames and transforms them in one pipeline call, so the MotionAdapter's
-    temporal layers keep the output consistent frame-to-frame.
+    Temporally-coherent path (AnimateDiff), streamed in overlapping windows.
 
-    This is single-window: the whole (bounded) clip must fit in memory. Arbitrary
-    length via overlapping windows + blend is Phase 3 (pipelines/windowing.py);
-    until then, bound the clip with --max_frames and downscale with -x/-y.
+    The clip is decoded lazily and processed a window at a time
+    (pipelines/windowing.py), so memory is bounded by one window regardless of
+    clip length. Adjacent windows share --overlap frames that are crossfaded to
+    hide seams, and every window uses the same seed so the style stays stable.
+
+    Bound each window with --window_size and downscale with -x/-y (auto-capped).
     """
+    import itertools
+
+    import torch
+
+    from ..pipelines.windowing import stitch
+
     model = options["model"]
     pipe = model["pipe"]
 
@@ -119,46 +126,53 @@ def _coherent_run(options, in_path, out_path):
         )
     size = (width, height)
 
-    frames = list(
-        read_frames(
-            in_path,
-            fps=options.get("fps"),
-            max_frames=options.get("max_frames"),
-            size=size,
-        )
-    )
-    if not frames:
-        raise Exception(f"No frames decoded from {in_path}")
-
     window_size = options.get("window_size") or 16
     overlap = options.get("overlap") or 4
-
-    # FreeNoise gives long-range coherence when the clip exceeds one context
-    # window; for short clips a single context covers everything.
-    if len(frames) > window_size and hasattr(pipe, "enable_free_noise"):
-        pipe.enable_free_noise(context_length=window_size, context_stride=overlap)
 
     kwargs = {
         "num_inference_steps": options["steps"],
         "negative_prompt": options.get("negative_prompt"),
+        "height": height,
+        "width": width,
     }
     if options.get("strength") is not None:
         kwargs["strength"] = options["strength"]
     if options.get("guidance_scale") is not None:
         kwargs["guidance_scale"] = options["guidance_scale"]
-    kwargs["height"] = height
-    kwargs["width"] = width
 
-    result = pipe(video=frames, prompt=options["prompt"], **kwargs)
-    out_frames = result.frames[0]
+    seeds = options.get("seeds") or []
+    seed = int(seeds[0]) if seeds and seeds[0] is not None else None
 
-    source = probe(in_path)
-    out_fps = options.get("fps") or source["fps"] or 16
+    window_index = {"n": 0}
+
+    def process_fn(win_frames):
+        window_index["n"] += 1
+        print(f"  window {window_index['n']}: {len(win_frames)} frames")
+        call_kwargs = dict(kwargs)
+        if seed is not None:
+            # Re-seed each window identically so the added noise (and thus style)
+            # is consistent across windows rather than drifting.
+            call_kwargs["generator"] = torch.Generator(device="cpu").manual_seed(seed)
+        return pipe(video=win_frames, prompt=options["prompt"], **call_kwargs).frames[0]
+
+    frame_iter = read_frames(
+        in_path,
+        fps=options.get("fps"),
+        max_frames=options.get("max_frames"),
+        size=size,
+    )
+    # Fail early on an empty/undecodable clip rather than writing an empty mp4.
+    try:
+        first = next(frame_iter)
+    except StopIteration:
+        raise Exception(f"No frames decoded from {in_path}")
+    frame_iter = itertools.chain([first], frame_iter)
+
+    out_fps = options.get("fps") or probe(in_path)["fps"] or 16
 
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
     with VideoWriter(out_path, fps=out_fps) as writer:
-        for frame in out_frames:
-            writer.append(frame)
+        count = stitch(process_fn, frame_iter, window_size, overlap, writer.append)
 
     write_sidecar(
         out_path,
@@ -166,18 +180,20 @@ def _coherent_run(options, in_path, out_path):
             "prompt": options["prompt"],
             "negative_prompt": options.get("negative_prompt"),
             "model": model["name"],
-            "path": "coherent (animatediff, single-window)",
+            "path": "coherent (animatediff, windowed)",
             "steps": options["steps"],
             "strength": options.get("strength"),
             "guidance_scale": options.get("guidance_scale"),
             "window_size": window_size,
+            "overlap": overlap,
+            "windows": window_index["n"],
             "source": in_path,
             "out_fps": out_fps,
-            "frames": len(out_frames),
+            "frames": count,
         },
     )
 
-    return out_path, len(out_frames)
+    return out_path, count
 
 
 def _naive_frame_transform(options):
