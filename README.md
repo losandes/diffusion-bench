@@ -139,6 +139,34 @@ Tunables (override via environment):
   Unset by default because too low will OOM large models (e.g. HiDream); try `0.7`
   for the smaller SD / dreamlike models.
 
+### Video-to-video (experimental)
+
+Transform an `.mp4` with a prompt. Pass a video to `-i/--input_paths`. The
+naive path (`--naive`) refines each frame independently with any img2img-capable
+model — it's cheap but flickers (no temporal coherence). The coherent
+AnimateDiff path is in progress; see `docs/plans/video-vid2vid.md`.
+
+```shell
+./run.sh --prompt "analog style, a tabby cat" \
+  --models "timbrooks/instruct-pix2pix" \
+  --input_paths "clip.mp4" \
+  --naive --strength 0.6 --guidance_scale 8.5 \
+  --fps 12 --max_frames 48
+```
+
+Video options:
+
+- `--naive` — route video through the per-frame path (needs an img2img model)
+- `--strength` — change amount, `0.0`–`1.0` (higher = further from the source)
+- `--guidance_scale` / `-g` — prompt adherence
+- `--fps` — output frame rate (subsamples when lower than the source)
+- `--max_frames` — cap frames processed
+- `--window_size` / `--overlap` — window/blend size for the coherent path (unused by `--naive`)
+- `--controlnet` — `off` \| `lineart` \| `depth` structure conditioning (coherent path)
+
+Output is written as `.mp4` with a `<name>.mp4.json` sidecar recording the
+prompt, model, and parameters (mp4 has no EXIF equivalent).
+
 models:
 
 - [wavymulder/Analog-Diffusion](https://huggingface.co/wavymulder/Analog-Diffusion)
