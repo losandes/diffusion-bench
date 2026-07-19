@@ -146,9 +146,13 @@ Transform an `.mp4` with a prompt. Pass a video to `-i/--input_paths`.
 **Coherent (recommended) — AnimateDiff.** Use `-m guoyww/animatediff-v1-5-2`.
 A MotionAdapter keeps the output consistent frame-to-frame. It's SD1.5-based and
 its attention cost scales with resolution squared, so the processing size is
-auto-capped to 512px on the longest side (aspect-preserving); raise it with
+auto-capped to 512px (aspect-preserving); raise it with
 `DIFFUSION_BENCH_MAX_SIZE=768 ...` if you have the memory. First run downloads
 ~2.5GB of weights.
+
+For video, `-x/-y` act as a **maximum bounding box**, not an exact size: the
+clip's own aspect ratio (and orientation, including rotated phone footage) is
+always preserved. Omit them and the source is fit inside a 512px box.
 
 Clips of **any length** are processed in overlapping windows (crossfaded at the
 seams), so memory is bounded by one window regardless of duration. `--window_size`

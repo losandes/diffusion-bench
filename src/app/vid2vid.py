@@ -12,6 +12,8 @@ each frame is refined independently, which is cheap but flickers.
 """
 import os
 
+from PIL import Image
+
 from ..constants import VID2VID
 from ..files.video import VideoWriter, probe, read_frames, write_sidecar
 
@@ -21,15 +23,25 @@ def _swap_ext(path, ext):
     return f"{root}.{ext.lstrip('.')}"
 
 
-def _fit_size(width, height, cap):
+def _fit_source(options, src_w, src_h):
     """
-    Scales (width, height) so the longest side is <= cap, preserving aspect
-    ratio, and rounds each dimension down to a multiple of 8 (VAE requirement).
-    Never upscales. Returns (width, height), each >= 8.
+    Fits a source frame (src_w x src_h) inside the -x/-y bounding box -- each side
+    also bounded by the DIFFUSION_BENCH_MAX_SIZE cap (default 512) -- preserving
+    the source aspect ratio, and rounds each dimension down to a multiple of 8
+    (VAE requirement). Never upscales.
+
+    -x/-y act as a *maximum* box for video (not an exact size), so the output
+    keeps the clip's own aspect ratio regardless of orientation.
+
+    Returns (width, height, cap, downscaled) where `downscaled` is True only when
+    the box actually shrank the frame -- not when it merely rounded to /8.
     """
-    scale = min(1.0, cap / max(width, height))
+    cap = int(os.environ.get("DIFFUSION_BENCH_MAX_SIZE", "512"))
+    box_w = min(options.get("width") or cap, cap)
+    box_h = min(options.get("height") or cap, cap)
+    scale = min(box_w / src_w, box_h / src_h, 1.0)  # preserve aspect, never upscale
     fit = lambda n: max(8, int(n * scale) // 8 * 8)
-    return fit(width), fit(height)
+    return fit(src_w), fit(src_h), cap, scale < 1.0
 
 
 def _derive_output_path(options):
@@ -100,7 +112,8 @@ def _coherent_run(options, in_path, out_path):
     clip length. Adjacent windows share --overlap frames that are crossfaded to
     hide seams, and every window uses the same seed so the style stays stable.
 
-    Bound each window with --window_size and downscale with -x/-y (auto-capped).
+    -x/-y act as a maximum bounding box (source aspect is preserved); --window_size
+    bounds memory per window.
     """
     import itertools
 
@@ -111,23 +124,41 @@ def _coherent_run(options, in_path, out_path):
     model = options["model"]
     pipe = model["pipe"]
 
-    # AnimateDiff is SD1.5-based and its spatial self-attention cost scales with
-    # (H*W)^2, so large frames blow up memory (e.g. 1280x1920 needs a ~1.4TB
-    # attention buffer). Cap the longest side and preserve aspect ratio; the cap
-    # is overridable for machines with more headroom.
-    cap = int(os.environ.get("DIFFUSION_BENCH_MAX_SIZE", "512"))
-    req_w = options.get("width") or cap
-    req_h = options.get("height") or cap
-    width, height = _fit_size(req_w, req_h, cap)
-    if (width, height) != (req_w, req_h):
-        print(
-            f"AnimateDiff: downscaling {req_w}x{req_h} -> {width}x{height} "
-            f"(SD1.5/MPS memory cap {cap}px; set DIFFUSION_BENCH_MAX_SIZE to change)"
-        )
-    size = (width, height)
+    # window_size / overlap: only fall back to defaults when actually unset, so a
+    # legitimate --overlap 0 isn't swallowed by `0 or 4`.
+    window_size = options.get("window_size")
+    window_size = 16 if window_size is None else int(window_size)
+    if window_size < 1:
+        raise Exception("window_size must be at least 1")
+    overlap = options.get("overlap")
+    overlap = 4 if overlap is None else int(overlap)
 
-    window_size = options.get("window_size") or 16
-    overlap = options.get("overlap") or 4
+    # Decode at native resolution and measure the FIRST decoded frame -- that
+    # reflects any rotation the decoder applied, so aspect/orientation are correct
+    # even for rotated phone clips. Fail early on an empty/undecodable clip.
+    frame_iter = read_frames(
+        in_path,
+        fps=options.get("fps"),
+        max_frames=options.get("max_frames"),
+    )
+    try:
+        first = next(frame_iter)
+    except StopIteration:
+        raise Exception(f"No frames decoded from {in_path}")
+
+    src_w, src_h = first.size
+    # AnimateDiff is SD1.5-based; spatial self-attention scales with (H*W)^2, so
+    # large frames blow up memory. Fit within the box, preserving aspect.
+    width, height, cap, downscaled = _fit_source(options, src_w, src_h)
+    if downscaled:
+        print(
+            f"AnimateDiff: processing at {width}x{height} (fit from source "
+            f"{src_w}x{src_h}, max {cap}px; set DIFFUSION_BENCH_MAX_SIZE to change)"
+        )
+
+    # Resize the stream to the aspect-preserved target (decouples resize from decode).
+    native_iter = itertools.chain([first], frame_iter)
+    frame_iter = (frame.resize((width, height), Image.LANCZOS) for frame in native_iter)
 
     kwargs = {
         "num_inference_steps": options["steps"],
@@ -155,19 +186,6 @@ def _coherent_run(options, in_path, out_path):
             call_kwargs["generator"] = torch.Generator(device="cpu").manual_seed(seed)
         return pipe(video=win_frames, prompt=options["prompt"], **call_kwargs).frames[0]
 
-    frame_iter = read_frames(
-        in_path,
-        fps=options.get("fps"),
-        max_frames=options.get("max_frames"),
-        size=size,
-    )
-    # Fail early on an empty/undecodable clip rather than writing an empty mp4.
-    try:
-        first = next(frame_iter)
-    except StopIteration:
-        raise Exception(f"No frames decoded from {in_path}")
-    frame_iter = itertools.chain([first], frame_iter)
-
     out_fps = options.get("fps") or probe(in_path)["fps"] or 16
 
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
@@ -181,6 +199,7 @@ def _coherent_run(options, in_path, out_path):
             "negative_prompt": options.get("negative_prompt"),
             "model": model["name"],
             "path": "coherent (animatediff, windowed)",
+            "resolution": f"{width}x{height}",
             "steps": options["steps"],
             "strength": options.get("strength"),
             "guidance_scale": options.get("guidance_scale"),
@@ -237,10 +256,6 @@ def vid2vid(options, ensembleIdx=0):
     in_path = in_paths[0]
     out_path = _derive_output_path(options)
 
-    width = options.get("width")
-    height = options.get("height")
-    size = (width, height) if width and height else None
-
     print("")
     print(f"model_id: {options['model']['name']}")
     print(f"prompt:   {options['prompt']}")
@@ -251,6 +266,16 @@ def vid2vid(options, ensembleIdx=0):
     # AnimateDiff (VID2VID) models use the coherent path unless --naive is set.
     if options["model"]["type"] == VID2VID and not options.get("naive"):
         return _coherent_run(options, in_path, out_path)
+
+    # Naive path: fit the source within the -x/-y box, preserving aspect ratio
+    # (measured from a decoded frame so rotated clips aren't distorted).
+    peek = next(read_frames(in_path), None)
+    if peek is None:
+        raise Exception(f"No frames decoded from {in_path}")
+    tw, th, cap, downscaled = _fit_source(options, *peek.size)
+    if downscaled:
+        print(f"vid2vid: processing at {tw}x{th} (fit from source {peek.size[0]}x{peek.size[1]}, max {cap}px)")
+    size = (tw, th)
 
     transform = _naive_frame_transform(options)
 
