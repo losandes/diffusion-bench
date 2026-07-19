@@ -10,7 +10,7 @@ dependencies = [
     "diffusers",
     "imageio[ffmpeg]>=2.34.0",
     "invisible-watermark>=0.2.0",
-    "ipykernel>=6.29.5",
+    "ipykernel>=7.3.0",
     "ipyplot>=1.1.2",
     "mediapipe>=0.10.21",
     "pillow>=12.2.0",       # security: OOB write / decompression-bomb / overflow fixes
