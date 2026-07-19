@@ -192,6 +192,34 @@ Video options:
 Output is written as `.mp4` with a `<name>.mp4.json` sidecar recording the
 prompt, model, and parameters (mp4 has no EXIF equivalent).
 
+### Upscaling (separate step)
+
+The coherent path generates at ~512px, so a separate upscaler restores
+resolution. It's a standalone step (`python3 -m src.upscale`, or `./upscale.sh`),
+not part of the generation pipeline, and works on both **images and video**.
+
+```shell
+# upscale a generated clip back to its source resolution
+./upscale.sh -i images/clip-animatediff.mp4 --to 1920x1080
+
+# or a plain multiplier, on an image or video
+./upscale.sh -i frame.png --upscaler realesrgan --scale 4
+```
+
+Upscale options:
+
+- `--upscaler` / `-u` — `realesrgan` (default; sharp, deterministic) or `lanczos` (soft, free fallback)
+- `--to` — target size as **WIDTHxHEIGHT** (e.g. `1920x1080`), aspect preserved
+- `--scale` — multiplier (e.g. `2`); used when `--to` is omitted
+- `--fps` / `--max_frames` — video only
+- `--weights` — override the Real-ESRGAN weights (e.g. an anime variant); the
+  default `RealESRGAN_x4plus.pth` is auto-downloaded to `~/.cache/diffusion-bench`
+
+Note: upscaling *synthesizes* plausible detail — it can't recover what wasn't
+generated. Real-ESRGAN is per-frame but deterministic, so on the already-coherent
+output it adds little flicker; video-native backends (RealBasicVSR/BasicVSR++)
+and diffusion upscalers are planned (see `docs/plans/upscale.md`).
+
 models:
 
 - [wavymulder/Analog-Diffusion](https://huggingface.co/wavymulder/Analog-Diffusion)
