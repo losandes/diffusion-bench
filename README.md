@@ -139,6 +139,59 @@ Tunables (override via environment):
   Unset by default because too low will OOM large models (e.g. HiDream); try `0.7`
   for the smaller SD / dreamlike models.
 
+### Video-to-video (experimental)
+
+Transform an `.mp4` with a prompt. Pass a video to `-i/--input_paths`.
+
+**Coherent (recommended) — AnimateDiff.** Use `-m guoyww/animatediff-v1-5-2`.
+A MotionAdapter keeps the output consistent frame-to-frame. It's SD1.5-based and
+its attention cost scales with resolution squared, so the processing size is
+auto-capped to 512px (aspect-preserving); raise it with
+`DIFFUSION_BENCH_MAX_SIZE=768 ...` if you have the memory. First run downloads
+~2.5GB of weights.
+
+For video, `-x/-y` act as a **maximum bounding box**, not an exact size: the
+clip's own aspect ratio (and orientation, including rotated phone footage) is
+always preserved. Omit them and the source is fit inside a 512px box.
+
+Clips of **any length** are processed in overlapping windows (crossfaded at the
+seams), so memory is bounded by one window regardless of duration. `--window_size`
+(default 16) is the memory/quality knob — larger windows are more coherent but
+use more memory; `--overlap` (default 4, must be ≤ half the window) controls the
+blend. `--max_frames` just trims how much of the clip is used.
+
+```shell
+./run.sh --prompt "analog style, a tabby cat" \
+  --models "guoyww/animatediff-v1-5-2" \
+  --input_paths "clip.mp4" \
+  -x 512 -y 512 --strength 0.6 --guidance_scale 8.5 \
+  --fps 12 --max_frames 32
+```
+
+**Naive fallback.** `--naive` refines each frame independently with any
+img2img-capable model — cheap, but flickers (no temporal coherence).
+
+```shell
+./run.sh --prompt "analog style, a tabby cat" \
+  --models "timbrooks/instruct-pix2pix" \
+  --input_paths "clip.mp4" \
+  --naive --strength 0.6 --guidance_scale 8.5 \
+  --fps 12 --max_frames 48
+```
+
+Video options:
+
+- `--naive` — route video through the per-frame path (needs an img2img model)
+- `--strength` — change amount, `0.0`–`1.0` (higher = further from the source)
+- `--guidance_scale` / `-g` — prompt adherence
+- `--fps` — output frame rate (subsamples when lower than the source)
+- `--max_frames` — cap frames processed
+- `--window_size` / `--overlap` — window/blend size for the coherent path (unused by `--naive`)
+- `--controlnet` — `off` \| `lineart` \| `depth` structure conditioning (coherent path)
+
+Output is written as `.mp4` with a `<name>.mp4.json` sidecar recording the
+prompt, model, and parameters (mp4 has no EXIF equivalent).
+
 models:
 
 - [wavymulder/Analog-Diffusion](https://huggingface.co/wavymulder/Analog-Diffusion)

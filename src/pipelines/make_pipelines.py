@@ -1,6 +1,7 @@
-from constants import GENERATOR, REFINER, UPSCALER
+from constants import GENERATOR, REFINER, UPSCALER, VID2VID
 
 from . import analog_diffusion as analog
+from . import animatediff_vid2vid as animatediff
 from . import analog_diffusion_euler_a as analog_euler
 from . import deci_diffusion as dd
 from . import dreamlike_photoreal as dp
@@ -18,6 +19,16 @@ from . import wrong_lora_refiner as wrong
 from . import wuerstchen
 
 PIPELINES = {
+    "guoyww/animatediff-v1-5-2": {
+        "short_name": "animatediff",
+        "type": VID2VID,  # coherent video-to-video (needs a video input)
+        "factory": animatediff.makePipelines,
+        # AnimateDiff's UNetMotionModel has no plain `.unet.config.in_channels`
+        # read path we rely on; override to skip it. Latents are managed by the
+        # pipeline (video frames), not the img2img latents helper.
+        "in_channels": 4,
+        "supports_latents": False,
+    },
     "HiDream-ai/HiDream-I1-Full": {
         "short_name": "hidream-i1",
         "type": GENERATOR,

@@ -32,6 +32,16 @@ def parse_args ():
   parser.add_argument("--refinement_mode", help = "one of: \"sequence\" (each pass is fed into the next pass), \"first_to_many\" (each pass is fed the first item generated), or \"in_to_many\" (each pass is fed the value of -i/--input_paths)")
   parser.add_argument("--copyright", help = "Set who should be listed as the copyright owner of the images that are created")
 
+  # video-to-video (see docs/plans/video-vid2vid.md)
+  parser.add_argument("--strength", help = "img2img/vid2vid change amount, 0.0-1.0 (comma-separated per model). Higher = further from the source")
+  parser.add_argument("--guidance_scale", "-g", help = "Classifier-free guidance scale / prompt adherence (comma-separated per model)")
+  parser.add_argument("--fps", help = "Target output frame rate for video passes. Subsamples when lower than the source (default: source fps)")
+  parser.add_argument("--max_frames", help = "Cap on the number of frames processed from an input video")
+  parser.add_argument("--window_size", help = "Frames per processing window for coherent (AnimateDiff) video passes (default=16)")
+  parser.add_argument("--overlap", help = "Overlapping frames blended between adjacent windows (default=4)")
+  parser.add_argument("--controlnet", help = "Structure conditioning for video passes: one of \"off\", \"lineart\", \"depth\" (default=off)")
+  parser.add_argument("--naive", action = "store_true", help = "Use the naive per-frame video path (refines each frame independently; flickers). Routes video input through vid2vid regardless of model type")
+
   # TODO: Add refinement_mode selection
   # - "sequence" (each pass is fed into the next pass)
   # - "first_to_many" (each pass is fed the first item generated)
@@ -77,6 +87,10 @@ def with_args (**kwargs):
   use_custom_latents = str(custom_latents).lower() != "false"
   seed = int(kwargs['seed']) if 'seed' in kwargs and kwargs['seed'] is not None else None
   input_paths = kwargs['input_paths'] if 'input_paths' in kwargs else None
+
+  def _num(key, cast, default=None):
+    value = kwargs[key] if key in kwargs else None
+    return cast(value) if value is not None else default
 
   if input_paths == None and model['type'] != GENERATOR and 'previous_pass' in kwargs:
     input_paths = kwargs['previous_pass']['output_paths']
@@ -127,6 +141,15 @@ def with_args (**kwargs):
     "output_paths": output_paths,
     "device_type": device_type,
     "copyright": kwargs['copyright'] if 'copyright' in kwargs else 'losandes/diffusion-bench',
+    # video-to-video params (see docs/plans/video-vid2vid.md)
+    "strength": _num('strength', float),
+    "guidance_scale": _num('guidance_scale', float),
+    "fps": _num('fps', float),
+    "max_frames": _num('max_frames', int),
+    "window_size": _num('window_size', int, 16),
+    "overlap": _num('overlap', int, 4),
+    "controlnet": kwargs['controlnet'] if 'controlnet' in kwargs and kwargs['controlnet'] not in (None, "off") else None,
+    "naive": bool(kwargs['naive']) if 'naive' in kwargs else False,
   }
 
 def map_terminal_input (args):
@@ -152,6 +175,15 @@ def map_terminal_input (args):
   OUTPUT_PATH_TEMPLATE = args.output_path_template if args.output_path_template is not None else ":dir_path/:count_idx-:model_idx-:name-:seed.png"
   OUTPUT_PATHS = []
   CUSTOM_LATENTS = split_to_list(",")(args.custom_latents if args.custom_latents is not None else "True")
+  # video-to-video params (per-model where a list makes sense, else global)
+  STRENGTH = split_to_list(",")(args.strength)
+  GUIDANCE_SCALE = split_to_list(",")(args.guidance_scale)
+  FPS = split_to_list(",")(args.fps)
+  MAX_FRAMES = split_to_list(",")(args.max_frames)
+  WINDOW_SIZE = split_to_list(",")(args.window_size)
+  OVERLAP = split_to_list(",")(args.overlap)
+  CONTROLNET = split_to_list(",")(args.controlnet)
+  NAIVE = bool(args.naive)
 
   for i in range(len(MODEL_IDS)):
     OUTPUT_PATHS.append(make_all_paths(OUTPUT_PATH_TEMPLATE)(OUTPUT_PATH, i, COUNT))
@@ -181,6 +213,14 @@ def map_terminal_input (args):
       previous_pass=None if idx == 0 else passes[idx - 1],
       copyright=COPYRIGHT,
       models=MODELS,
+      strength=get_value_or_none(STRENGTH, idx),
+      guidance_scale=get_value_or_none(GUIDANCE_SCALE, idx),
+      fps=get_value_or_first(FPS, idx),
+      max_frames=get_value_or_first(MAX_FRAMES, idx),
+      window_size=get_value_or_first(WINDOW_SIZE, idx),
+      overlap=get_value_or_first(OVERLAP, idx),
+      controlnet=get_value_or_first(CONTROLNET, idx),
+      naive=NAIVE,
     )
     passes.append(item)
     print("")
